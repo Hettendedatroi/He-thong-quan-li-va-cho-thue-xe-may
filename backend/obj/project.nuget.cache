@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "v8JwV+svKyg=",
+  "dgSpecHash": "bDPkHNhri/g=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Admin\\Downloads\\MotoRental\\backend\\MotoRental.Api.csproj",
+  "projectFilePath": "C:\\Users\\Admin\\Documents\\GitHub\\He-thong-quan-li-va-cho-thue-xe-may\\backend\\MotoRental.Api.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Admin\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.32\\microsoft.aspnetcore.authentication.jwtbearer.8.0.32.nupkg.sha512",

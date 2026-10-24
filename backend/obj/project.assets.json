@@ -1397,11 +1397,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Admin\\Downloads\\MotoRental\\backend\\MotoRental.Api.csproj",
+      "projectUniqueName": "C:\\Users\\Admin\\Documents\\GitHub\\He-thong-quan-li-va-cho-thue-xe-may\\backend\\MotoRental.Api.csproj",
       "projectName": "MotoRental.Api",
-      "projectPath": "C:\\Users\\Admin\\Downloads\\MotoRental\\backend\\MotoRental.Api.csproj",
+      "projectPath": "C:\\Users\\Admin\\Documents\\GitHub\\He-thong-quan-li-va-cho-thue-xe-may\\backend\\MotoRental.Api.csproj",
       "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Admin\\Downloads\\MotoRental\\backend\\obj\\",
+      "outputPath": "C:\\Users\\Admin\\Documents\\GitHub\\He-thong-quan-li-va-cho-thue-xe-may\\backend\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
