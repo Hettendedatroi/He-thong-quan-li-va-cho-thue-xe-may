@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MotoRental.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9c238927f4a530542853ccd3e56c339fe6e30d59")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+54ffaa85f082f5d0462cb2abfeafbc58c03ca1ce")]
 [assembly: System.Reflection.AssemblyProductAttribute("MotoRental.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MotoRental.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
