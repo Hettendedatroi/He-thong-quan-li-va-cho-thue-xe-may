@@ -8,7 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 if (builder.Environment.IsDevelopment())
-    builder.WebHost.UseUrls("http://localhost:5080");
+    builder.WebHost.UseUrls("https://he-thong-quan-li-va-cho-thue-xe-may.onrender.com");
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
@@ -18,7 +18,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? "Data Source=motorental.db";
 builder.Services.AddDbContext<AppDb>(o => o.UseSqlite(connectionString));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod()));
+    p.WithOrigins("https://hettendedatroi.github.io").AllowAnyHeader().AllowAnyMethod()));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o => o.TokenValidationParameters = new TokenValidationParameters
     {
@@ -51,7 +51,7 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 }
-
+app.UseCors("web");
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
