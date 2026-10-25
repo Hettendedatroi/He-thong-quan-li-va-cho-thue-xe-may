@@ -3,7 +3,7 @@ name: Deploy frontend to Pages
 on:
   push:
     branches: [main]
-    paths: ["moto-rental-web/src/**"]
+    paths: ["moto-rental-web/**"]
   workflow_dispatch:
 
 permissions:
