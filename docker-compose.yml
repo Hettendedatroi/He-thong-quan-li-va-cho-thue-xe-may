@@ -1,0 +1,25 @@
+services:
+  api:
+    build:
+      context: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__DefaultConnection: "Data Source=/app/data/motorental.db"
+      Jwt__Key: "${JWT_KEY:?Set JWT_KEY in .env}"
+      Admin__Password: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}"
+    volumes:
+      - motorental_data:/app/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./moto-rental-web
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+volumes:
+  motorental_data:

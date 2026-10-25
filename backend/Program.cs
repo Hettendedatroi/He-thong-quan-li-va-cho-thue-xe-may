@@ -7,10 +7,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseUrls("http://localhost:5080");
-var jwtKey = builder.Configuration["Jwt:Key"]!;
+if (builder.Environment.IsDevelopment())
+    builder.WebHost.UseUrls("http://localhost:5080");
 
-builder.Services.AddDbContext<AppDb>(o => o.UseSqlite("Data Source=motorental.db"));
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException("Jwt:Key must contain at least 32 bytes.");
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Data Source=motorental.db";
+builder.Services.AddDbContext<AppDb>(o => o.UseSqlite(connectionString));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod()));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -38,7 +44,8 @@ using (var scope = app.Services.CreateScope())
             FullName = "Chủ cửa hàng",
             Email = "admin@motorental.vn",
             Phone = "0900000000",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+                builder.Configuration["Admin:Password"] ?? "Admin@123"),
             Role = "Admin"
         });
         db.SaveChanges();

@@ -6,7 +6,7 @@ import { tap } from 'rxjs';
 export interface User { id: number; fullName: string; email: string; phone: string; role: string; }
 interface AuthResult { token: string; user: User; }
 
-const API = 'http://localhost:5080/api/auth';
+const API = '/api/auth';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
