@@ -18,7 +18,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? "Data Source=motorental.db";
 builder.Services.AddDbContext<AppDb>(o => o.UseSqlite(connectionString));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.WithOrigins("https://hettendedatroi.github.io").AllowAnyHeader().AllowAnyMethod()));
+    p.WithOrigins("https://github.com/Hettendedatroi/He-thong-quan-li-va-cho-thue-xe-may.git").AllowAnyHeader().AllowAnyMethod()));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o => o.TokenValidationParameters = new TokenValidationParameters
     {
@@ -51,7 +51,7 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 }
-app.UseCors("web");
+
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
