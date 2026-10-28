@@ -2,11 +2,12 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpInterceptorFn } from '@angular/common/http';
 import { CanActivateFn, Router } from '@angular/router';
 import { tap } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface User { id: number; fullName: string; email: string; phone: string; role: string; }
 interface AuthResult { token: string; user: User; }
 
-const API = '/api/auth';
+const API = `${environment.apiUrl}/auth`;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

@@ -21,3 +21,4 @@ Yêu cầu: .NET 8 SDK và Node.js 20.
 ## Ghi chú
 - Docker lấy khóa JWT và mật khẩu quản trị từ biến môi trường trong `.env`.
 - Đây là phần Tài khoản (FR-01 đến FR-03). Các chức năng xe, đặt xe, đơn thuê làm tiếp theo SRS.
+- Frontend production trên GitHub Pages gọi API tại `https://he-thong-quan-li-va-cho-thue-xe-may.onrender.com/api`. URL gốc Render có thể trả 404 vì đây là API, không phải trang frontend.
