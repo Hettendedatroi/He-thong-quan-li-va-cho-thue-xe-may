@@ -1,8 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth';
+import { environment } from '../../environments/environment';
 
 interface Motorcycle {
   name: string;
@@ -80,6 +81,7 @@ export class HomeComponent implements OnInit {
   favoriteNames: string[] = [];
   selectedMotorcycle: Motorcycle | null = null;
   bookingComplete = false;
+  interactionError = signal<string | null>(null);
   startDate = new Date().toISOString().slice(0, 10);
   endDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
@@ -101,14 +103,20 @@ export class HomeComponent implements OnInit {
   }
 
   openBooking(motorcycle: Motorcycle): void {
+    if (this.simulateInteractionError('Chọn xe')) return;
     this.selectedMotorcycle = motorcycle;
     this.bookingComplete = false;
   }
 
   toggleFavorite(name: string): void {
+    if (this.simulateInteractionError('Thả tim xe')) return;
     this.favoriteNames = this.favoriteNames.includes(name)
       ? this.favoriteNames.filter(favorite => favorite !== name)
       : [...this.favoriteNames, name];
+  }
+
+  dismissInteractionError(): void {
+    this.interactionError.set(null);
   }
 
   closeBooking(): void {
@@ -123,5 +131,11 @@ export class HomeComponent implements OnInit {
   logout(): void {
     this.auth.logout();
     this.router.navigateByUrl('/login');
+  }
+
+  private simulateInteractionError(action: string): boolean {
+    if (!environment.simulateInteractionErrors) return false;
+    this.interactionError.set(action);
+    return true;
   }
 }

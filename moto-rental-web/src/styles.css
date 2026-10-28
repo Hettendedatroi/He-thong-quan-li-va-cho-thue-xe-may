@@ -162,6 +162,10 @@ input.ng-touched.ng-invalid { border-color:var(--danger); }
 .success-mark { display:grid; width:44px; height:44px; margin-bottom:14px; place-items:center; border-radius:50%; color:#318457; background:#e6f5ec; font-size:1.35rem; font-weight:800; }
 .booking-modal .success-mark~.demo-note { padding:10px; border-radius:7px; background:#f6f8f9; }
 .mobile-logout { border:0; color:#8b5946; background:transparent; font-size:.72rem; font-weight:700; }
+.simulated-crash { min-height:100vh; display:grid; place-items:center; padding:24px; background:#17202a; }
+.simulated-crash-card { width:min(100%,520px); padding:32px; border:1px solid #48545e; border-radius:12px; background:#1f2933; color:#fff; }
+.simulated-crash-label { color:#f5c518; font-size:.7rem; font-weight:800; letter-spacing:.1em; }
+.simulated-crash-card p:not(.simulated-crash-label) { color:#c5ccd3; }
 @media (max-width:760px) {
   .auth { grid-template-columns:1fr; }
   .auth-aside { padding:1.25rem 1.5rem; gap:1rem; }
