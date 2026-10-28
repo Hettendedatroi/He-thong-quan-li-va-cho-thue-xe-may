@@ -20,6 +20,7 @@ builder.Services.AddDbContext<AppDb>(o => o.UseSqlite(connectionString));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.WithOrigins(
         "https://hettendedatroi.github.io",
+        "https://testing-cyan-kappa.vercel.app",
         "http://localhost:4200",
         "https://localhost:4200")
      .AllowAnyHeader()
