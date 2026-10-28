@@ -1,4 +1,4 @@
 export const environment = {
-  simulateInteractionErrors: false,
+  simulateInteractionErrors: true,
   apiUrl: 'https://he-thong-quan-li-va-cho-thue-xe-may.onrender.com/api'
 };

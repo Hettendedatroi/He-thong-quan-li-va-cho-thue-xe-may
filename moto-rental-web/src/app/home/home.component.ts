@@ -134,7 +134,7 @@ export class HomeComponent implements OnInit {
   }
 
   private simulateInteractionError(action: string): boolean {
-    if (!environment.simulateInteractionErrors) return false;
+    if (!environment.simulateInteractionErrors || !this.isAdmin) return false;
     this.interactionError.set(action);
     return true;
   }

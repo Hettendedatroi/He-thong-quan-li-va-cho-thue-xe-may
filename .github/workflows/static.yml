@@ -2,6 +2,9 @@ name: Manually deploy Angular to Pages
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
