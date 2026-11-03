@@ -1,1 +1,11 @@
-{"Version":1,"Hash":"g+vSVNNuQBbKZjSh3aYsPXEfTerTu4qpb5fIp2lJkdc=","Source":"MotoRental.Api","BasePath":"/","Mode":"Root","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}
+{
+  "Version": 1,
+  "Hash": "5p5le480lgXR+dzj/4a7ix1jJE4YpuJEQWxPJ7Cc0l8=",
+  "Source": "MotoRental.Api",
+  "BasePath": "_content/MotoRental.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

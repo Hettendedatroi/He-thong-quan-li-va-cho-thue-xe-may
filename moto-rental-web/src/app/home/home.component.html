@@ -1,13 +1,3 @@
-@if (interactionError(); as action) {
-  <main class="simulated-crash" role="alert">
-    <section class="simulated-crash-card">
-      <p class="simulated-crash-label">LỖI GIẢ LẬP · DEVELOPMENT</p>
-      <h1>Đã xảy ra lỗi</h1>
-      <p>Thao tác “{{ action }}” gặp lỗi giả lập. Ứng dụng đang hiển thị màn hình lỗi để kiểm thử; không có dữ liệu nào bị thay đổi.</p>
-      <button class="primary-button" type="button" (click)="dismissInteractionError()">Khôi phục giao diện</button>
-    </section>
-  </main>
-} @else {
 <div class="dashboard">
   <aside class="sidebar">
     <a class="brand" href="#top" aria-label="MotoGo trang chủ">
@@ -18,10 +8,10 @@
     <p class="sidebar-label">MENU CHÍNH</p>
     <nav class="side-nav" aria-label="Điều hướng chính">
       <a class="side-link active" href="#top"><span aria-hidden="true">⌂</span> Tổng quan</a>
-      <a class="side-link" href="#fleet"><span aria-hidden="true">◉</span> Đội xe <span class="nav-count">12</span></a>
+      <a class="side-link" href="#fleet" (click)="navigateSection($event)"><span aria-hidden="true">◉</span> Đội xe <span class="nav-count">12</span></a>
       <a class="side-link" href="#bookings"><span aria-hidden="true">▤</span> Đơn thuê <span class="nav-count">4</span></a>
       @if (isAdmin) {
-        <a class="side-link" href="#reports"><span aria-hidden="true">▥</span> Báo cáo</a>
+        <a class="side-link" href="#reports" (click)="navigateSection($event)"><span aria-hidden="true">▥</span> Báo cáo</a>
       }
     </nav>
 
@@ -72,7 +62,7 @@
       </section>
 
       @if (isAdmin) {
-        <section class="stats-grid" aria-label="Tổng quan hoạt động">
+        <section class="stats-grid" id="reports" aria-label="Tổng quan hoạt động">
           <article class="stat-card">
             <div class="stat-top"><span>Doanh thu hôm nay</span><span class="stat-icon orange">₫</span></div>
             <strong class="stat-value">8.450.000<span class="stat-unit">đ</span></strong>
@@ -198,12 +188,16 @@
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>MÃ ĐƠN</th><th>KHÁCH HÀNG</th><th>XE THUÊ</th><th>THỜI GIAN</th><th>TỔNG TIỀN</th><th>TRẠNG THÁI</th></tr>
+                <tr><th>MÃ ĐƠN</th><th>KHÁCH HÀNG</th><th>XE THUÊ</th><th>THỜI GIAN</th><th>TỔNG TIỀN</th><th>TRẠNG THÁI</th><th>THAO TÁC</th></tr>
               </thead>
               <tbody>
-                <tr><td class="order-id">#MG-2024-084</td><td>Nguyễn Minh Anh</td><td>Honda Vision</td><td>24/06 – 26/06</td><td>360.000đ</td><td><span class="status-badge pending">Chờ xác nhận</span></td></tr>
-                <tr><td class="order-id">#MG-2024-083</td><td>Trần Quốc Bảo</td><td>Yamaha Grande</td><td>24/06 – 27/06</td><td>750.000đ</td><td><span class="status-badge active">Đang thuê</span></td></tr>
-                <tr><td class="order-id">#MG-2024-082</td><td>Lê Ngọc Hà</td><td>Honda Wave RSX</td><td>23/06 – 24/06</td><td>150.000đ</td><td><span class="status-badge complete">Hoàn thành</span></td></tr>
+                <tr>
+                  <td class="order-id">#MG-2024-084</td><td>Nguyễn Minh Anh</td><td>Honda Vision</td><td>24/06 – 26/06</td><td>360.000đ</td>
+                  <td><span class="status-badge" [class.pending]="!confirmedRentalIds.includes('MG-2024-084')" [class.active]="confirmedRentalIds.includes('MG-2024-084')">{{ confirmedRentalIds.includes('MG-2024-084') ? 'Đang thuê' : 'Chờ xác nhận' }}</span></td>
+                  <td><button type="button" (click)="confirmRental('MG-2024-084')" [disabled]="confirmedRentalIds.includes('MG-2024-084')">{{ confirmedRentalIds.includes('MG-2024-084') ? 'Đã xác nhận' : 'Xác nhận' }}</button></td>
+                </tr>
+                <tr><td class="order-id">#MG-2024-083</td><td>Trần Quốc Bảo</td><td>Yamaha Grande</td><td>24/06 – 27/06</td><td>750.000đ</td><td><span class="status-badge active">Đang thuê</span></td><td></td></tr>
+                <tr><td class="order-id">#MG-2024-082</td><td>Lê Ngọc Hà</td><td>Honda Wave RSX</td><td>23/06 – 24/06</td><td>150.000đ</td><td><span class="status-badge complete">Hoàn thành</span></td><td></td></tr>
               </tbody>
             </table>
           </div>
@@ -237,5 +231,4 @@
       }
     </section>
   </div>
-}
 }
