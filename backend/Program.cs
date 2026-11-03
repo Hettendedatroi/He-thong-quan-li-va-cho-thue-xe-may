@@ -7,12 +7,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
-if (builder.Environment.IsDevelopment())
-    builder.WebHost.UseUrls("https://he-thong-quan-li-va-cho-thue-xe-may.onrender.com");
+var port = Environment.GetEnvironmentVariable("PORT");
+if (int.TryParse(port, out var renderPort) && renderPort is > 0 and <= 65535)
+    builder.WebHost.UseUrls($"http://0.0.0.0:{renderPort}");
+else if (builder.Environment.IsDevelopment())
+    builder.WebHost.UseUrls("http://localhost:5080");
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
     throw new InvalidOperationException("Jwt:Key must contain at least 32 bytes.");
+
+var adminPassword = builder.Configuration["Admin:Password"];
+if (string.IsNullOrWhiteSpace(adminPassword))
+    throw new InvalidOperationException("Admin:Password must be configured.");
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=motorental.db";
@@ -50,8 +57,7 @@ using (var scope = app.Services.CreateScope())
             FullName = "Chủ cửa hàng",
             Email = "admin@motorental.vn",
             Phone = "0900000000",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(
-                builder.Configuration["Admin:Password"] ?? "Admin@123"),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
             Role = "Admin"
         });
         db.SaveChanges();
@@ -61,6 +67,8 @@ using (var scope = app.Services.CreateScope())
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 // FR-01: Đăng ký (vai trò mặc định: Khách thuê)
 app.MapPost("/api/auth/register", async (RegisterDto d, AppDb db) =>
