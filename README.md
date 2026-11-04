@@ -1,6 +1,6 @@
 # MotoRental
 
-Hệ thống hiện có phần đăng ký, đăng nhập và trang tổng quan demo cho cửa hàng thuê xe máy.
+Hệ thống hiện có phần đăng ký, đăng nhập và trang tổng quan demo cho cửa hàng thuê xe máy. https://hettendedatroi.github.io/He-thong-quan-li-va-cho-thue-xe-may/
 
 ## Công nghệ
 
