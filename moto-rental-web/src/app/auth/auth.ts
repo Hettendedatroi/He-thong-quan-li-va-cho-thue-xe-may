@@ -9,10 +9,34 @@ interface AuthResult { token: string; user: User; }
 
 const API = `${environment.apiUrl}/auth`;
 
+function isUser(value: unknown): value is User {
+  return typeof value === 'object' && value !== null
+    && 'id' in value && typeof value.id === 'number'
+    && 'fullName' in value && typeof value.fullName === 'string'
+    && 'email' in value && typeof value.email === 'string'
+    && 'phone' in value && typeof value.phone === 'string'
+    && 'role' in value && typeof value.role === 'string';
+}
+
+function readStoredUser(): User | null {
+  const storedUser = localStorage.getItem('user');
+  if (storedUser === null) return null;
+
+  try {
+    const parsed: unknown = JSON.parse(storedUser);
+    if (isUser(parsed)) return parsed;
+  } catch (error) {
+    console.warn('Stored user data is invalid and has been cleared.', error);
+  }
+
+  localStorage.removeItem('user');
+  return null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
-  user = signal<User | null>(JSON.parse(localStorage.getItem('user') ?? 'null'));
+  user = signal<User | null>(readStoredUser());
 
   get token() { return localStorage.getItem('token'); }
 

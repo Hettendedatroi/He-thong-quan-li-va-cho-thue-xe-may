@@ -114,7 +114,7 @@
         <div class="fleet-toolbar">
           <label class="search-box">
             <span aria-hidden="true">⌕</span>
-            <input type="search" [(ngModel)]="searchTerm" placeholder="Tìm tên xe, dòng xe..." aria-label="Tìm xe máy" />
+            <input type="search" [ngModel]="searchTerm" (ngModelChange)="onSearchChange($event)" placeholder="Tìm tên xe, dòng xe..." aria-label="Tìm xe máy" />
             <kbd>⌘ K</kbd>
           </label>
           <div class="category-list" aria-label="Lọc theo loại xe">
@@ -159,7 +159,7 @@
                   <span><i aria-hidden="true">⚙</i>{{ motorcycle.transmission }}</span>
                 </div>
                 <div class="bike-card-footer">
-                  <p><strong>{{ motorcycle.price | number }}</strong><span>đ / ngày</span></p>
+                  <p><strong>{{ motorcycle.price | number }}</strong><span>{{ motorcycle.name === 'Yamaha Exciter 155' ? 'đ / giờ' : 'đ / ngày' }}</span></p>
                   <button class="rent-button" type="button" (click)="openBooking(motorcycle)">
                     {{ isAdmin ? 'Tạo đơn' : 'Thuê xe' }} <span aria-hidden="true">→</span>
                   </button>
@@ -221,7 +221,7 @@
       } @else {
         <p class="eyebrow">ĐẶT XE CÙNG MOTOGO</p>
         <h2 id="booking-title">{{ isAdmin ? 'Tạo đơn thuê' : 'Đặt xe của bạn' }}</h2>
-        <p class="modal-bike-name">{{ selectedMotorcycle.name }} · {{ selectedMotorcycle.price | number }}đ / ngày</p>
+        <p class="modal-bike-name">{{ selectedMotorcycle.name }} · {{ selectedMotorcycle.price | number }}đ / {{ selectedMotorcycle.name === 'Yamaha Exciter 155' ? 'giờ' : 'ngày' }}</p>
         <form (ngSubmit)="submitBooking()">
           <label>Ngày nhận xe<input name="startDate" type="date" [(ngModel)]="startDate" required /></label>
           <label>Ngày trả xe<input name="endDate" type="date" [(ngModel)]="endDate" required /></label>

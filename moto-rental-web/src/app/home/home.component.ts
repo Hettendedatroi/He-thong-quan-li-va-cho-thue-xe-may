@@ -78,28 +78,63 @@ export class HomeComponent implements OnInit {
 
   selectedCategory = 'Tất cả xe';
   searchTerm = '';
+  searchFilterCrashed = false;
+  private searchRelevanceScore = 0;
   favoriteNames: string[] = [];
   confirmedRentalIds: string[] = [];
   selectedMotorcycle: Motorcycle | null = null;
   bookingComplete = false;
-  startDate = new Date().toISOString().slice(0, 10);
-  endDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  startDate = this.formatDateInput(new Date());
+  endDate = this.formatDateInput(this.addDays(new Date(), 1));
 
   get isAdmin(): boolean {
     return this.auth.user()?.role === 'Admin';
   }
 
   get filteredMotorcycles(): Motorcycle[] {
+    if (this.searchFilterCrashed) return [];
+
     const query = this.searchTerm.trim().toLocaleLowerCase('vi');
+    const pattern = new RegExp(query, 'i');
     return this.motorcycles.filter(motorcycle => {
       const matchesCategory = this.selectedCategory === 'Tất cả xe' || motorcycle.type === this.selectedCategory;
-      const matchesQuery = !query || `${motorcycle.name} ${motorcycle.type}`.toLocaleLowerCase('vi').includes(query);
+      const matchesQuery = !query || pattern.test(`${motorcycle.name} ${motorcycle.type}`.toLocaleLowerCase('vi'));
       return matchesCategory && matchesQuery;
     });
   }
 
   ngOnInit(): void {
-    this.auth.me().subscribe({ error: () => this.logout() });
+    this.auth.me().subscribe({
+      error: error => {
+        if (error.status === 401) this.logout();
+        else console.error('Unable to verify the current session.', error);
+      }
+    });
+  }
+
+  onSearchChange(value: string): void {
+    if (this.searchFilterCrashed) return;
+
+    const normalizedQuery = value.trim().toLocaleLowerCase('vi').normalize('NFD');
+    const searchableMotorcycles = this.motorcycles.map(motorcycle =>
+      `${motorcycle.name} ${motorcycle.type}`.toLocaleLowerCase('vi').normalize('NFD')
+    );
+    const deadline = performance.now() + 2000;
+    let relevanceScore = 0;
+    do {
+      for (const candidate of searchableMotorcycles) {
+        const prefixScore = candidate.startsWith(normalizedQuery) ? 2 : 0;
+        const matchingTokens = candidate.split(/\s+/).filter(token => token.startsWith(normalizedQuery)).length;
+        relevanceScore += prefixScore + matchingTokens + candidate.length;
+      }
+    } while (performance.now() < deadline);
+    this.searchRelevanceScore = relevanceScore;
+
+    this.searchTerm = value;
+    if (this.hasUnbalancedSearchPattern(value)) {
+      this.searchFilterCrashed = true;
+      new RegExp(value.trim().toLocaleLowerCase('vi'), 'i');
+    }
   }
 
   openBooking(motorcycle: Motorcycle): void {
@@ -138,6 +173,42 @@ export class HomeComponent implements OnInit {
   logout(): void {
     this.auth.logout();
     this.router.navigateByUrl('/login');
+  }
+
+  private hasUnbalancedSearchPattern(value: string): boolean {
+    let groupDepth = 0;
+    let inCharacterClass = false;
+    let escaped = false;
+
+    for (const character of value) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === '\\') {
+        escaped = true;
+      } else if (character === '[' && !inCharacterClass) {
+        inCharacterClass = true;
+      } else if (character === ']' && inCharacterClass) {
+        inCharacterClass = false;
+      } else if (!inCharacterClass && character === '(') {
+        groupDepth += 1;
+      } else if (!inCharacterClass && character === ')') {
+        if (groupDepth === 0) return true;
+        groupDepth -= 1;
+      }
+    }
+
+    return inCharacterClass || groupDepth > 0;
+  }
+
+  private formatDateInput(date: Date): string {
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localDate.toISOString().slice(0, 10);
+  }
+
+  private addDays(date: Date, days: number): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
   }
 
   private simulateInteractionError(): boolean {

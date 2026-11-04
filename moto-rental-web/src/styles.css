@@ -142,7 +142,7 @@ input.ng-touched.ng-invalid { border-color:var(--danger); }
 .table-wrap td { padding:13px 14px; border-top:1px solid #f0f2f4; color:#64737e; font-size:.7rem; }
 .table-wrap .order-id { color:#344957; font-weight:700; }
 .status-badge { padding:5px 8px; border-radius:20px; font-size:.62rem; font-weight:700; }
-.status-badge.pending { color:#b37d2c; background:#fff6e5; }
+.status-badge.pending { color:#e6c45c; background:#fff6e5; }
 .status-badge.active { color:#4c8d68; background:#eaf6ef; }
 .status-badge.complete { color:#6687a6; background:#edf4fa; }
 .demo-note { color:#9aa5ad; font-size:.66rem; }
@@ -166,6 +166,11 @@ input.ng-touched.ng-invalid { border-color:var(--danger); }
 .simulated-crash-card { width:min(100%,520px); padding:32px; border:1px solid #48545e; border-radius:12px; background:#1f2933; color:#fff; }
 .simulated-crash-label { color:#f5c518; font-size:.7rem; font-weight:800; letter-spacing:.1em; }
 .simulated-crash-card p:not(.simulated-crash-label) { color:#c5ccd3; }
+@media (min-width:761px) and (max-width:1280px) {
+  .bike-card-footer { position:relative; display:block; min-height:32px; }
+  .bike-card-footer p { width:150px; flex-wrap:nowrap; white-space:nowrap; }
+  .bike-card-footer .rent-button { position:absolute; top:0; left:82px; z-index:1; white-space:nowrap; }
+}
 @media (max-width:760px) {
   .auth { grid-template-columns:1fr; }
   .auth-aside { padding:1.25rem 1.5rem; gap:1rem; }

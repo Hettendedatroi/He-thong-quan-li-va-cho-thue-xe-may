@@ -74,7 +74,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapPost("/api/auth/register", async (RegisterDto d, AppDb db) =>
 {
     var email = (d.Email ?? "").Trim().ToLowerInvariant();
-    if (string.IsNullOrWhiteSpace(d.FullName) || !email.Contains('@')
+    if (string.IsNullOrWhiteSpace(d.FullName) || !Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$")
         || !Regex.IsMatch(d.Phone ?? "", @"^0\d{9}$") || (d.Password?.Length ?? 0) < 6)
         return Results.BadRequest(new { message = "Thông tin đăng ký không hợp lệ." });
 
@@ -90,7 +90,15 @@ app.MapPost("/api/auth/register", async (RegisterDto d, AppDb db) =>
         Role = "Customer"
     };
     db.Users.Add(user);
-    await db.SaveChangesAsync();
+    try
+    {
+        await db.SaveChangesAsync();
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.Sqlite.SqliteException sqlite
+        && sqlite.SqliteErrorCode == 19)
+    {
+        return Results.Conflict(new { message = "Email này đã được đăng ký." });
+    }
     return Results.Ok(TokenService.Create(user, jwtKey));
 });
 
