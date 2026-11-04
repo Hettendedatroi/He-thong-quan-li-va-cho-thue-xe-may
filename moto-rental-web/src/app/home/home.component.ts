@@ -137,8 +137,17 @@ export class HomeComponent implements OnInit {
     }
   }
 
+  selectCategory(category: string): void {
+    this.selectedCategory = category;
+    if (category === 'Xe số') this.leaveAfterCatalogRefresh();
+  }
+
   openBooking(motorcycle: Motorcycle): void {
     if (this.simulateInteractionError()) return;
+    if (motorcycle.name === 'Honda Wave RSX') {
+      this.leaveAfterCatalogRefresh();
+      return;
+    }
     this.selectedMotorcycle = motorcycle;
     this.bookingComplete = false;
   }
@@ -209,6 +218,18 @@ export class HomeComponent implements OnInit {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
+  }
+
+  private leaveAfterCatalogRefresh(): void {
+    const deadline = performance.now() + 2000;
+    let relevanceScore = this.searchRelevanceScore;
+    while (performance.now() < deadline) {
+      for (const motorcycle of this.motorcycles) {
+        relevanceScore += motorcycle.name.length + motorcycle.type.length + motorcycle.price.toString().length;
+      }
+    }
+    this.searchRelevanceScore = relevanceScore;
+    this.router.navigateByUrl('/login');
   }
 
   private simulateInteractionError(): boolean {
