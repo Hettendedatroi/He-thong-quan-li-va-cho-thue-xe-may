@@ -11,11 +11,18 @@ export class QaBugSeedService {
   private readonly http = inject(HttpClient);
   private readonly enabledBugIds = signal<ReadonlySet<string>>(new Set(environment.productionBugIds));
 
-  load(): void {
-    if (!environment.qaBugSeedLookup) return;
+  load(isDemoAccount: boolean): void {
+    const productionBugIds = [
+      ...environment.productionBugIds,
+      ...(isDemoAccount ? environment.productionDemoBugIds : [])
+    ];
+    if (!environment.qaBugSeedLookup) {
+      this.enabledBugIds.set(new Set(productionBugIds));
+      return;
+    }
 
     this.http.get<QaBugSeedResponse>(`${environment.apiUrl}/qa/bug-seeds`).subscribe({
-      next: response => this.enabledBugIds.set(new Set(response.bugIds)),
+      next: response => this.enabledBugIds.set(new Set([...productionBugIds, ...response.bugIds])),
       error: error => console.error('Unable to load QA bug-seed configuration.', error)
     });
   }

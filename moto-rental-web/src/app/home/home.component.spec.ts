@@ -12,12 +12,14 @@ describe('HomeComponent', () => {
     fullName: 'QA Customer',
     email: 'customer@example.com',
     phone: '0912345678',
-    role: 'Customer'
+    role: 'Customer',
+    isDemoAccount: false
   };
   const admin: User = { ...customer, role: 'Admin' };
   const enabledBugIds = new Set<string>();
   const authMock = {
     user: signal<User | null>(customer),
+    isDemoAccount: signal(false),
     me: jasmine.createSpy('me').and.returnValue(of(customer)),
     refreshUser: jasmine.createSpy('refreshUser'),
     logout: jasmine.createSpy('logout'),
@@ -47,6 +49,7 @@ describe('HomeComponent', () => {
   beforeEach(() => {
     enabledBugIds.clear();
     authMock.user.set(customer);
+    authMock.isDemoAccount.set(false);
     authMock.me.calls.reset();
     authMock.refreshUser.calls.reset();
     authMock.logout.calls.reset();
@@ -184,27 +187,45 @@ describe('HomeComponent', () => {
     expect(component.priceUnit(exciter)).toBe('giờ');
   });
 
-  it('only logs out Customer when BUG-05 is enabled for Xe số', () => {
+  it('only logs out the server-designated demo Customer for BUG-05', () => {
     enabledBugIds.add('BUG-05');
+    component.selectCategory('Xe số');
+    expect(authMock.logout).not.toHaveBeenCalled();
+
+    authMock.isDemoAccount.set(true);
     component.selectCategory('Xe số');
     expect(authMock.logout).toHaveBeenCalledTimes(1);
     expect(router.navigateByUrl).toHaveBeenCalledWith('/login');
 
     authMock.logout.calls.reset();
     authMock.user.set(admin);
+    authMock.isDemoAccount.set(true);
     component.selectCategory('Xe số');
     expect(authMock.logout).not.toHaveBeenCalled();
   });
 
-  it('opens the Honda Wave RSX booking normally and logs out only for BUG-06', () => {
+  it('logs out only the demo Customer for Honda Wave RSX, not other users or bikes', () => {
     const wave = component.motorcycles.find(motorcycle => motorcycle.name === 'Honda Wave RSX')!;
+    const vision = component.motorcycles.find(motorcycle => motorcycle.name === 'Honda Vision')!;
+    enabledBugIds.add('BUG-06');
+
     component.openBooking(wave);
     expect(component.selectedMotorcycle).toBe(wave);
+    expect(authMock.logout).not.toHaveBeenCalled();
 
-    enabledBugIds.add('BUG-06');
+    authMock.isDemoAccount.set(true);
+    component.openBooking(vision);
+    expect(component.selectedMotorcycle).toBe(vision);
+    expect(authMock.logout).not.toHaveBeenCalled();
+
     component.openBooking(wave);
     expect(authMock.logout).toHaveBeenCalledTimes(1);
     expect(router.navigateByUrl).toHaveBeenCalledWith('/login');
+
+    authMock.logout.calls.reset();
+    authMock.user.set(admin);
+    component.openBooking(wave);
+    expect(authMock.logout).not.toHaveBeenCalled();
   });
 
   it('keeps Admin logged in when confirming a sample order unless BUG-01 is enabled', () => {
@@ -219,12 +240,37 @@ describe('HomeComponent', () => {
     expect(router.navigateByUrl).toHaveBeenCalledWith('/login');
   });
 
-  it('reverses the numeric sort only when BUG-11 is enabled', () => {
+  it('reverses only ascending sort for the demo Customer and supports descending sort', () => {
     component.sortOrder = 'price-asc';
     enabledBugIds.add('BUG-11');
 
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.price))
+      .toEqual([150000, 180000, 250000, 350000]);
+
+    authMock.isDemoAccount.set(true);
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.price))
       .toEqual([350000, 250000, 180000, 150000]);
+
+    component.sortOrder = 'price-desc';
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.price))
+      .toEqual([350000, 250000, 180000, 150000]);
+  });
+
+  it('preserves search and category filters while sorting prices', () => {
+    component.onSearchChange('Honda');
+    component.selectCategory('Xe số');
+    component.sortOrder = 'price-desc';
+
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
+  });
+
+  it('exposes default, ascending, and descending sort choices to customers', () => {
+    const optionNodes = fixture.nativeElement.querySelectorAll(
+      '.sort-control option'
+    ) as NodeListOf<HTMLOptionElement>;
+    const options = Array.from(optionNodes).map(option => option.value);
+
+    expect(options).toEqual(['default', 'price-asc', 'price-desc']);
   });
 
   it('submits the current profile fields without adding a role', () => {

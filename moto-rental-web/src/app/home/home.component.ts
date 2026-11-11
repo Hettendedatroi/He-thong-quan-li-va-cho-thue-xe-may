@@ -117,7 +117,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   searchPending = false;
   private appliedCategory = 'Tất cả xe';
   private appliedSearchTerm = '';
-  sortOrder: 'default' | 'price-asc' = 'default';
+  sortOrder: 'default' | 'price-asc' | 'price-desc' = 'default';
   favoriteNames: string[] = [];
   confirmedRentalIds: string[] = [];
   selectedMotorcycle: Motorcycle | null = null;
@@ -147,8 +147,12 @@ export class HomeComponent implements OnInit, OnDestroy {
       return matchesCategory && matchesQuery;
     });
 
-    if (this.sortOrder !== 'price-asc') return filtered;
-    return [...filtered].sort((first, second) => this.qaBugs.isBugEnabled('BUG-11')
+    if (this.sortOrder === 'default') return filtered;
+    const descending = this.sortOrder === 'price-desc'
+      || (this.auth.isDemoAccount()
+        && this.qaBugs.isBugEnabled('BUG-11')
+        && this.sortOrder === 'price-asc');
+    return [...filtered].sort((first, second) => descending
       ? second.price - first.price
       : first.price - second.price);
   }
@@ -157,7 +161,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.auth.me().subscribe({
       next: user => {
         this.auth.refreshUser(user);
-        this.qaBugs.load();
+        this.qaBugs.load(user.isDemoAccount === true);
       },
       error: error => {
         if (error.status === 401) this.logout();
@@ -198,7 +202,10 @@ export class HomeComponent implements OnInit, OnDestroy {
   selectCategory(category: string): void {
     this.selectedCategory = category;
     this.updateSearchResults();
-    if (category === 'Xe số' && this.qaBugs.isBugEnabled('BUG-05') && !this.isAdmin)
+    if (category === 'Xe số'
+      && this.auth.isDemoAccount()
+      && this.qaBugs.isBugEnabled('BUG-05')
+      && !this.isAdmin)
       this.logout();
   }
 
@@ -209,6 +216,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   openBooking(motorcycle: Motorcycle): void {
     if (motorcycle.name === 'Honda Wave RSX'
+      && this.auth.isDemoAccount()
       && this.qaBugs.isBugEnabled('BUG-06')
       && !this.isAdmin) {
       this.logout();

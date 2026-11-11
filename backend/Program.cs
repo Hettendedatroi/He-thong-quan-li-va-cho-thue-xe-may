@@ -23,6 +23,9 @@ if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32
 var adminPassword = builder.Configuration["Admin:Password"];
 if (string.IsNullOrWhiteSpace(adminPassword))
     throw new InvalidOperationException("Admin:Password must be configured.");
+var demoCustomerUserId = builder.Configuration.GetValue<int?>("DemoAccount:CustomerUserId");
+bool IsDemoCustomer(User user) =>
+    user.Id == demoCustomerUserId && string.Equals(user.Role, "Customer", StringComparison.Ordinal);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=motorental.db";
@@ -108,7 +111,7 @@ app.MapPost("/api/auth/register", async (RegisterDto d, AppDb db, CancellationTo
     {
         return Results.Conflict(new { message = "Email này đã được đăng ký." });
     }
-    return Results.Ok(TokenService.Create(user, jwtKey));
+    return Results.Ok(TokenService.Create(user, jwtKey, IsDemoCustomer(user)));
 });
 
 // FR-02: Đăng nhập
@@ -133,7 +136,7 @@ app.MapPost("/api/auth/login", async (LoginDto d, AppDb db, CancellationToken ca
         return Results.Json(new { message }, statusCode: 401);
     }
 
-    return Results.Ok(TokenService.Create(user, jwtKey));
+    return Results.Ok(TokenService.Create(user, jwtKey, IsDemoCustomer(user)));
 });
 
 // Lấy thông tin người đang đăng nhập (dùng để kiểm tra token)
@@ -151,11 +154,12 @@ app.MapGet("/api/auth/me", async (ClaimsPrincipal p, AppDb db, CancellationToken
             user.Email,
             user.Phone,
             user.Role,
+            IsDemoAccount = IsDemoCustomer(user),
             PasswordHash = "QA_ONLY_DUMMY_HASH"
         });
     }
 
-    return Results.Ok(user.ToDto());
+    return Results.Ok(user.ToDto(IsDemoCustomer(user)));
 }).RequireAuthorization();
 
 app.MapPut("/api/auth/me", async (
@@ -173,12 +177,13 @@ app.MapPut("/api/auth/me", async (
     if (user is null) return Results.Unauthorized();
 
     if (bugSeeds.IsBugEnabled("BUG-13"))
-        return Results.Ok(new UserDto(user.Id, fullName, user.Email, request.Phone!, user.Role));
+        return Results.Ok(new UserDto(
+            user.Id, fullName, user.Email, request.Phone!, user.Role, IsDemoCustomer(user)));
 
     user.FullName = fullName;
     user.Phone = request.Phone!;
     await db.SaveChangesAsync(cancellationToken);
-    return Results.Ok(user.ToDto());
+    return Results.Ok(user.ToDto(IsDemoCustomer(user)));
 }).RequireAuthorization();
 
 app.MapPost("/api/admin/demo-rentals/export", (
@@ -229,7 +234,8 @@ public class User
     public string PasswordHash { get; set; } = "";
     public string Role { get; set; } = "Customer"; // Customer | Admin
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public UserDto ToDto() => new(Id, FullName, Email, Phone, Role);
+    public UserDto ToDto(bool isDemoAccount = false) =>
+        new(Id, FullName, Email, Phone, Role, isDemoAccount);
 }
 
 public class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
@@ -242,12 +248,18 @@ public class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
 public record RegisterDto(string? FullName, string? Email, string? Phone, string? Password, string? Role);
 public record LoginDto(string? Email, string? Password);
 public record UpdateProfileDto(string? FullName, string? Phone);
-public record UserDto(int Id, string FullName, string Email, string Phone, string Role);
+public record UserDto(
+    int Id,
+    string FullName,
+    string Email,
+    string Phone,
+    string Role,
+    bool IsDemoAccount = false);
 public record AuthResult(string Token, UserDto User);
 
 public static class TokenService
 {
-    public static AuthResult Create(User u, string key)
+    public static AuthResult Create(User u, string key, bool isDemoAccount)
     {
         var claims = new[]
         {
@@ -258,6 +270,8 @@ public static class TokenService
         var creds = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)), SecurityAlgorithms.HmacSha256);
         var jwt = new JwtSecurityToken(claims: claims, expires: DateTime.UtcNow.AddHours(8), signingCredentials: creds);
-        return new AuthResult(new JwtSecurityTokenHandler().WriteToken(jwt), u.ToDto());
+        return new AuthResult(
+            new JwtSecurityTokenHandler().WriteToken(jwt),
+            u.ToDto(isDemoAccount));
     }
 }
