@@ -146,7 +146,7 @@
           <p class="search-pending" role="status">Đang tìm xe...</p>
         }
 
-        <div class="motorcycle-grid">
+        <div class="motorcycle-grid" [attr.aria-busy]="searchPending">
           @for (motorcycle of filteredMotorcycles; track motorcycle.name) {
             <article class="motorcycle-card">
               <div class="bike-image-wrap">

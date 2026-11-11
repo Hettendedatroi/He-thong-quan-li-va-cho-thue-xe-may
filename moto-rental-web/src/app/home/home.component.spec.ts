@@ -60,11 +60,12 @@ describe('HomeComponent', () => {
     fixture.detectChanges();
   });
 
-  it('searches and filters sample motorcycles without losing the session', () => {
+  it('searches and filters immediately in Normal Mode without losing the session', () => {
     component.onSearchChange('honda');
     component.selectCategory('Xe số');
 
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
+    expect(component.searchPending).toBeFalse();
     expect(authMock.logout).not.toHaveBeenCalled();
   });
 
@@ -75,15 +76,96 @@ describe('HomeComponent', () => {
       .toEqual([150000, 180000, 250000, 350000]);
   });
 
-  it('delays only the filtered honda search asynchronously for BUG-03', fakeAsync(() => {
+  it('shows loading and delays combined QA search and filter results for 2 seconds', fakeAsync(() => {
     enabledBugIds.add('BUG-03');
+    component.onSearchChange('Honda');
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual([
+      'Honda Vision', 'Honda Wave RSX'
+    ]);
+
     component.selectCategory('Xe số');
-    component.onSearchChange('honda');
 
     expect(component.searchPending).toBeTrue();
-    expect(component.searchTerm).toBe('');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="status"]').textContent).toContain('Đang tìm xe');
+    expect(fixture.nativeElement.querySelector('.motorcycle-grid').getAttribute('aria-busy')).toBe('true');
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual([
+      'Honda Vision', 'Honda Wave RSX'
+    ]);
+    tick(1999);
+    expect(component.searchPending).toBeTrue();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.motorcycle-grid').getAttribute('aria-busy')).toBe('true');
+
+    tick(1);
+    fixture.detectChanges();
+    expect(component.searchPending).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.motorcycle-grid').getAttribute('aria-busy')).toBe('false');
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
+  }));
+
+  it('does not delay a standalone QA search or category selection', fakeAsync(() => {
+    enabledBugIds.add('BUG-03');
+
+    component.onSearchChange('Honda');
+    expect(component.searchPending).toBeFalse();
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual([
+      'Honda Vision', 'Honda Wave RSX'
+    ]);
+
+    component.onSearchChange('');
+    component.selectCategory('Xe số');
+    expect(component.searchPending).toBeFalse();
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
     tick(2000);
     expect(component.searchPending).toBeFalse();
+  }));
+
+  it('cancels stale combined searches and applies only the latest criteria', fakeAsync(() => {
+    enabledBugIds.add('BUG-03');
+    component.selectCategory('Xe số');
+    component.onSearchChange('Honda');
+    tick(1000);
+
+    component.onSearchChange('Yamaha');
+    expect(component.searchPending).toBeTrue();
+    tick(1000);
+
+    component.selectCategory('Xe tay ga');
+    expect(component.searchPending).toBeTrue();
+    tick(1999);
+    expect(component.searchPending).toBeTrue();
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
+
+    tick(1);
+    expect(component.searchPending).toBeFalse();
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Yamaha Grande']);
+  }));
+
+  it('shows the empty state after a delayed search with no matching vehicles', fakeAsync(() => {
+    enabledBugIds.add('BUG-03');
+    component.selectCategory('Xe số');
+    component.onSearchChange('Yamaha');
+    expect(component.searchPending).toBeTrue();
+
+    tick(2000);
+    expect(component.searchPending).toBeFalse();
+    expect(component.filteredMotorcycles).toEqual([]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.empty-state')).not.toBeNull();
+  }));
+
+  it('applies combined search immediately when BUG-03 is disabled', fakeAsync(() => {
+    enabledBugIds.add('BUG-03');
+    component.selectCategory('Xe số');
+    component.onSearchChange('Honda');
+    expect(component.searchPending).toBeTrue();
+
+    enabledBugIds.delete('BUG-03');
+    component.onSearchChange('Honda Wave');
+    expect(component.searchPending).toBeFalse();
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
+    tick(2000);
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
   }));
 

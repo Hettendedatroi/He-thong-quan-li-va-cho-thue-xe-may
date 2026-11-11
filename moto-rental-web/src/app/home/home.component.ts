@@ -115,6 +115,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   selectedCategory = 'Tất cả xe';
   searchTerm = '';
   searchPending = false;
+  private appliedCategory = 'Tất cả xe';
+  private appliedSearchTerm = '';
   sortOrder: 'default' | 'price-asc' = 'default';
   favoriteNames: string[] = [];
   confirmedRentalIds: string[] = [];
@@ -137,9 +139,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   get filteredMotorcycles(): Motorcycle[] {
-    const query = this.searchTerm.trim().toLocaleLowerCase('vi');
+    const query = this.appliedSearchTerm.trim().toLocaleLowerCase('vi');
     const filtered = this.motorcycles.filter(motorcycle => {
-      const matchesCategory = this.selectedCategory === 'Tất cả xe' || motorcycle.type === this.selectedCategory;
+      const matchesCategory = this.appliedCategory === 'Tất cả xe' || motorcycle.type === this.appliedCategory;
       const matchesQuery = !query
         || `${motorcycle.name} ${motorcycle.type}`.toLocaleLowerCase('vi').includes(query);
       return matchesCategory && matchesQuery;
@@ -169,32 +171,40 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   onSearchChange(value: string): void {
+    this.searchTerm = value;
+    this.updateSearchResults();
+  }
+
+  private updateSearchResults(): void {
     if (this.searchTimer !== null) clearTimeout(this.searchTimer);
     this.searchTimer = null;
     this.searchPending = false;
 
     const delayedSearch = this.qaBugs.isBugEnabled('BUG-03')
       && this.selectedCategory !== 'Tất cả xe'
-      && value.trim().toLocaleLowerCase('vi') === 'honda';
+      && this.searchTerm.trim().length > 0;
     if (delayedSearch) {
       this.searchPending = true;
       this.searchTimer = setTimeout(() => {
-        this.searchTerm = value;
+        this.applySearchCriteria();
         this.searchPending = false;
         this.searchTimer = null;
       }, 2000);
     } else {
-      this.searchTerm = value;
+      this.applySearchCriteria();
     }
   }
 
   selectCategory(category: string): void {
-    if (this.searchTimer !== null) clearTimeout(this.searchTimer);
-    this.searchTimer = null;
-    this.searchPending = false;
     this.selectedCategory = category;
+    this.updateSearchResults();
     if (category === 'Xe số' && this.qaBugs.isBugEnabled('BUG-05') && !this.isAdmin)
       this.logout();
+  }
+
+  private applySearchCriteria(): void {
+    this.appliedSearchTerm = this.searchTerm;
+    this.appliedCategory = this.selectedCategory;
   }
 
   openBooking(motorcycle: Motorcycle): void {
