@@ -20,7 +20,7 @@ Tạo một **Web Service** từ repository:
 3. Nếu gói Render hỗ trợ persistent disk, gắn disk tại `/var/data`. Nếu không gắn persistent disk, dữ liệu SQLite có thể mất khi service được tạo lại hoặc khởi động lại.
 4. Có thể đặt health check path là `/health`.
 
-Ứng dụng tự lắng nghe trên cổng do Render cấp qua biến `PORT`. `DemoAccount:CustomerUserId` chỉ định User ID Customer demo (hiện là `123`; có thể ghi đè bằng biến Render `DemoAccount__CustomerUserId`). Backend chỉ trả `isDemoAccount=true` sau khi xác thực token và khớp ID với bản ghi có role Customer; Admin và các tài khoản khác không được đánh dấu. Không commit khóa JWT hoặc mật khẩu thật vào repository. Endpoint API nằm dưới `/api`; URL gốc của service không phải trang web.
+Ứng dụng tự lắng nghe trên cổng do Render cấp qua biến `PORT`. `DemoAccount:CustomerUserId` chỉ định User ID Customer demo (hiện là `2`; có thể ghi đè bằng biến Render `DemoAccount__CustomerUserId`). Backend chỉ trả `isDemoAccount=true` sau khi xác thực token và khớp ID với bản ghi có role Customer; Admin và các tài khoản khác không được đánh dấu. Không commit khóa JWT hoặc mật khẩu thật vào repository. Endpoint API nằm dưới `/api`; URL gốc của service không phải trang web.
 
 ## Deploy frontend lên GitHub Pages
 
