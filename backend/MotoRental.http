@@ -1,0 +1,60 @@
+@baseUrl = http://localhost:5080
+@token = replace-with-a-local-test-token
+
+### Read the authenticated profile
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Update only the authenticated user's name and phone
+PUT {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Nguyen QA",
+  "phone": "0912345678"
+}
+
+### Invalid profile update returns 400
+PUT {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": " ",
+  "phone": "123"
+}
+
+### Export the sample rows shown on the Admin dashboard
+POST {{baseUrl}}/api/admin/demo-rentals/export
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rows": [
+    {
+      "orderId": "#MG-2024-084",
+      "customerName": "Nguyen Minh Anh",
+      "motorcycleName": "Honda Vision",
+      "period": "24/06 – 26/06",
+      "amount": "360.000đ",
+      "status": "Chờ xác nhận"
+    },
+    {
+      "orderId": "#MG-2024-083",
+      "customerName": "Tran Quoc Bao",
+      "motorcycleName": "Yamaha Grande",
+      "period": "24/06 – 27/06",
+      "amount": "750.000đ",
+      "status": "Đang thuê"
+    },
+    {
+      "orderId": "#MG-2024-082",
+      "customerName": "Le Ngoc Ha",
+      "motorcycleName": "Honda Wave RSX",
+      "period": "23/06 – 24/06",
+      "amount": "150.000đ",
+      "status": "Hoàn thành"
+    }
+  ]
+}

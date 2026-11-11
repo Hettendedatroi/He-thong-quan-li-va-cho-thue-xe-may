@@ -7,10 +7,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+var bugSeeds = QaBugSeedService.FromConfiguration(builder.Environment, builder.Configuration);
 var port = Environment.GetEnvironmentVariable("PORT");
-if (int.TryParse(port, out var renderPort) && renderPort is > 0 and <= 65535)
+if (bugSeeds.RequiresLoopbackOnly)
+    builder.WebHost.UseUrls("http://localhost:5080");
+else if (int.TryParse(port, out var renderPort) && renderPort is > 0 and <= 65535)
     builder.WebHost.UseUrls($"http://0.0.0.0:{renderPort}");
-else if (builder.Environment.IsDevelopment())
+else if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("QA"))
     builder.WebHost.UseUrls("http://localhost:5080");
 
 var jwtKey = builder.Configuration["Jwt:Key"];
@@ -23,7 +26,9 @@ if (string.IsNullOrWhiteSpace(adminPassword))
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=motorental.db";
+connectionString = bugSeeds.GetConnectionString(connectionString);
 builder.Services.AddDbContext<AppDb>(o => o.UseSqlite(connectionString));
+builder.Services.AddSingleton(bugSeeds);
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.WithOrigins(
         "https://hettendedatroi.github.io",
@@ -71,14 +76,15 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 // FR-01: Đăng ký (vai trò mặc định: Khách thuê)
-app.MapPost("/api/auth/register", async (RegisterDto d, AppDb db) =>
+app.MapPost("/api/auth/register", async (RegisterDto d, AppDb db, CancellationToken cancellationToken) =>
 {
-    var email = (d.Email ?? "").Trim().ToLowerInvariant();
+    var enteredEmail = (d.Email ?? "").Trim();
+    var email = bugSeeds.IsBugEnabled("BUG-07") ? enteredEmail : enteredEmail.ToLowerInvariant();
     if (string.IsNullOrWhiteSpace(d.FullName) || !Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$")
         || !Regex.IsMatch(d.Phone ?? "", @"^0\d{9}$") || (d.Password?.Length ?? 0) < 6)
         return Results.BadRequest(new { message = "Thông tin đăng ký không hợp lệ." });
 
-    if (await db.Users.AnyAsync(u => u.Email == email))
+    if (await db.Users.AnyAsync(u => u.Email == email, cancellationToken))
         return Results.Conflict(new { message = "Email này đã được đăng ký." });
 
     var user = new User
@@ -87,12 +93,15 @@ app.MapPost("/api/auth/register", async (RegisterDto d, AppDb db) =>
         Email = email,
         Phone = d.Phone!,
         PasswordHash = BCrypt.Net.BCrypt.HashPassword(d.Password),
-        Role = "Customer"
+        Role = bugSeeds.IsBugEnabled("BUG-08")
+            && string.Equals(d.Role, "Admin", StringComparison.OrdinalIgnoreCase)
+                ? "Admin"
+                : "Customer"
     };
     db.Users.Add(user);
     try
     {
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(cancellationToken);
     }
     catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.Sqlite.SqliteException sqlite
         && sqlite.SqliteErrorCode == 19)
@@ -103,22 +112,106 @@ app.MapPost("/api/auth/register", async (RegisterDto d, AppDb db) =>
 });
 
 // FR-02: Đăng nhập
-app.MapPost("/api/auth/login", async (LoginDto d, AppDb db) =>
+app.MapPost("/api/auth/login", async (LoginDto d, AppDb db, CancellationToken cancellationToken) =>
 {
-    var email = (d.Email ?? "").Trim().ToLowerInvariant();
-    var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
-    if (user is null || !BCrypt.Net.BCrypt.Verify(d.Password ?? "", user.PasswordHash))
-        return Results.Json(new { message = "Email hoặc mật khẩu không đúng." }, statusCode: 401);
+    var enteredEmail = (d.Email ?? "").Trim();
+    var email = bugSeeds.IsBugEnabled("BUG-07") ? enteredEmail : enteredEmail.ToLowerInvariant();
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+    if (user is null)
+    {
+        var message = bugSeeds.IsBugEnabled("BUG-09")
+            ? "Email không tồn tại."
+            : "Email hoặc mật khẩu không đúng.";
+        return Results.Json(new { message }, statusCode: 401);
+    }
+
+    if (!BCrypt.Net.BCrypt.Verify(d.Password ?? "", user.PasswordHash))
+    {
+        var message = bugSeeds.IsBugEnabled("BUG-09")
+            ? "Mật khẩu không chính xác."
+            : "Email hoặc mật khẩu không đúng.";
+        return Results.Json(new { message }, statusCode: 401);
+    }
+
     return Results.Ok(TokenService.Create(user, jwtKey));
 });
 
 // Lấy thông tin người đang đăng nhập (dùng để kiểm tra token)
-app.MapGet("/api/auth/me", async (ClaimsPrincipal p, AppDb db) =>
+app.MapGet("/api/auth/me", async (ClaimsPrincipal p, AppDb db, CancellationToken cancellationToken) =>
 {
     var id = int.Parse(p.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    var user = await db.Users.FindAsync(id);
-    return user is null ? Results.Unauthorized() : Results.Ok(user.ToDto());
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    if (user is null) return Results.Unauthorized();
+    if (bugSeeds.IsBugEnabled("BUG-10"))
+    {
+        return Results.Ok(new
+        {
+            user.Id,
+            user.FullName,
+            user.Email,
+            user.Phone,
+            user.Role,
+            PasswordHash = "QA_ONLY_DUMMY_HASH"
+        });
+    }
+
+    return Results.Ok(user.ToDto());
 }).RequireAuthorization();
+
+app.MapPut("/api/auth/me", async (
+    UpdateProfileDto request,
+    ClaimsPrincipal principal,
+    AppDb db,
+    CancellationToken cancellationToken) =>
+{
+    var fullName = request.FullName?.Trim();
+    if (string.IsNullOrWhiteSpace(fullName) || !Regex.IsMatch(request.Phone ?? "", @"^0\d{9}$"))
+        return Results.BadRequest(new { message = "Họ tên không được để trống; số điện thoại gồm 10 chữ số và bắt đầu bằng 0." });
+
+    var id = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    if (user is null) return Results.Unauthorized();
+
+    if (bugSeeds.IsBugEnabled("BUG-13"))
+        return Results.Ok(new UserDto(user.Id, fullName, user.Email, request.Phone!, user.Role));
+
+    user.FullName = fullName;
+    user.Phone = request.Phone!;
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(user.ToDto());
+}).RequireAuthorization();
+
+app.MapPost("/api/admin/demo-rentals/export", (
+    DemoRentalExportRequest request,
+    CancellationToken cancellationToken) =>
+{
+    var rows = request.Rows ?? Array.Empty<DemoRentalExportRow>();
+    if (rows.Count > 100 || rows.Any(row => row is null
+        || string.IsNullOrWhiteSpace(row.OrderId) || row.OrderId.Length > 40
+        || string.IsNullOrWhiteSpace(row.CustomerName) || row.CustomerName.Length > 100
+        || string.IsNullOrWhiteSpace(row.MotorcycleName) || row.MotorcycleName.Length > 100
+        || string.IsNullOrWhiteSpace(row.Period) || row.Period.Length > 100
+        || string.IsNullOrWhiteSpace(row.Amount) || row.Amount.Length > 50
+        || string.IsNullOrWhiteSpace(row.Status) || row.Status.Length > 50))
+    {
+        return Results.BadRequest(new { message = "Danh sách đơn mẫu không hợp lệ." });
+    }
+
+    var exportRows = bugSeeds.IsBugEnabled("BUG-12") && rows.Count > 0
+        ? rows.Take(rows.Count - 1).ToArray()
+        : rows;
+    var file = DemoExcelExport.Create(exportRows, cancellationToken);
+    return Results.File(file,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "motorental-don-mau.xlsx");
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("QA"))
+{
+    app.MapGet("/api/qa/bug-seeds", (QaBugSeedService seeds) =>
+            Results.Ok(new { bugIds = seeds.EnabledIds }))
+        .RequireAuthorization();
+}
 
 // FR-03: Ví dụ endpoint chỉ dành cho quản trị viên
 app.MapGet("/api/admin/ping", () => Results.Ok(new { message = "Xin chào quản trị viên" }))
@@ -146,8 +239,9 @@ public class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
         b.Entity<User>().HasIndex(u => u.Email).IsUnique();
 }
 
-public record RegisterDto(string? FullName, string? Email, string? Phone, string? Password);
+public record RegisterDto(string? FullName, string? Email, string? Phone, string? Password, string? Role);
 public record LoginDto(string? Email, string? Password);
+public record UpdateProfileDto(string? FullName, string? Phone);
 public record UserDto(int Id, string FullName, string Email, string Phone, string Role);
 public record AuthResult(string Token, UserDto User);
 

@@ -1,9 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../auth/auth';
-import { environment } from '../../environments/environment';
+import { AuthService, DemoRentalExportRow } from '../auth/auth';
+import { QaBugSeedService } from '../qa-bug-seeds';
 
 interface Motorcycle {
   name: string;
@@ -16,14 +16,24 @@ interface Motorcycle {
   tag: string;
 }
 
+interface DemoRentalOrder {
+  orderId: string;
+  customerName: string;
+  motorcycleName: string;
+  period: string;
+  amount: string;
+  initialStatus: string;
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './home.component.html'
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
+  readonly qaBugs = inject(QaBugSeedService);
   private router = inject(Router);
 
   readonly categories = ['Tất cả xe', 'Xe tay ga', 'Xe số', 'Xe côn tay'];
@@ -75,15 +85,50 @@ export class HomeComponent implements OnInit {
       tag: 'Cao cấp'
     }
   ];
+  readonly sampleRentalOrders: DemoRentalOrder[] = [
+    {
+      orderId: 'MG-2024-084',
+      customerName: 'Nguyễn Minh Anh',
+      motorcycleName: 'Honda Vision',
+      period: '24/06 – 26/06',
+      amount: '360.000đ',
+      initialStatus: 'Chờ xác nhận'
+    },
+    {
+      orderId: 'MG-2024-083',
+      customerName: 'Trần Quốc Bảo',
+      motorcycleName: 'Yamaha Grande',
+      period: '24/06 – 27/06',
+      amount: '750.000đ',
+      initialStatus: 'Đang thuê'
+    },
+    {
+      orderId: 'MG-2024-082',
+      customerName: 'Lê Ngọc Hà',
+      motorcycleName: 'Honda Wave RSX',
+      period: '23/06 – 24/06',
+      amount: '150.000đ',
+      initialStatus: 'Hoàn thành'
+    }
+  ];
 
   selectedCategory = 'Tất cả xe';
   searchTerm = '';
-  searchFilterCrashed = false;
-  private searchRelevanceScore = 0;
+  searchPending = false;
+  sortOrder: 'default' | 'price-asc' = 'default';
   favoriteNames: string[] = [];
   confirmedRentalIds: string[] = [];
   selectedMotorcycle: Motorcycle | null = null;
   bookingComplete = false;
+  profileDialogOpen = false;
+  profileName = '';
+  profilePhone = '';
+  profileSaving = false;
+  profileSuccess = '';
+  profileError = '';
+  exportPending = false;
+  exportError = '';
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
   startDate = this.formatDateInput(new Date());
   endDate = this.formatDateInput(this.addDays(new Date(), 1));
 
@@ -92,19 +137,26 @@ export class HomeComponent implements OnInit {
   }
 
   get filteredMotorcycles(): Motorcycle[] {
-    if (this.searchFilterCrashed) return [];
-
     const query = this.searchTerm.trim().toLocaleLowerCase('vi');
-    const pattern = new RegExp(query, 'i');
-    return this.motorcycles.filter(motorcycle => {
+    const filtered = this.motorcycles.filter(motorcycle => {
       const matchesCategory = this.selectedCategory === 'Tất cả xe' || motorcycle.type === this.selectedCategory;
-      const matchesQuery = !query || pattern.test(`${motorcycle.name} ${motorcycle.type}`.toLocaleLowerCase('vi'));
+      const matchesQuery = !query
+        || `${motorcycle.name} ${motorcycle.type}`.toLocaleLowerCase('vi').includes(query);
       return matchesCategory && matchesQuery;
     });
+
+    if (this.sortOrder !== 'price-asc') return filtered;
+    return [...filtered].sort((first, second) => this.qaBugs.isBugEnabled('BUG-11')
+      ? second.price - first.price
+      : first.price - second.price);
   }
 
   ngOnInit(): void {
     this.auth.me().subscribe({
+      next: user => {
+        this.auth.refreshUser(user);
+        this.qaBugs.load();
+      },
       error: error => {
         if (error.status === 401) this.logout();
         else console.error('Unable to verify the current session.', error);
@@ -112,40 +164,44 @@ export class HomeComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    if (this.searchTimer !== null) clearTimeout(this.searchTimer);
+  }
+
   onSearchChange(value: string): void {
-    if (this.searchFilterCrashed) return;
+    if (this.searchTimer !== null) clearTimeout(this.searchTimer);
+    this.searchTimer = null;
+    this.searchPending = false;
 
-    const normalizedQuery = value.trim().toLocaleLowerCase('vi').normalize('NFD');
-    const searchableMotorcycles = this.motorcycles.map(motorcycle =>
-      `${motorcycle.name} ${motorcycle.type}`.toLocaleLowerCase('vi').normalize('NFD')
-    );
-    const deadline = performance.now() + 2000;
-    let relevanceScore = 0;
-    do {
-      for (const candidate of searchableMotorcycles) {
-        const prefixScore = candidate.startsWith(normalizedQuery) ? 2 : 0;
-        const matchingTokens = candidate.split(/\s+/).filter(token => token.startsWith(normalizedQuery)).length;
-        relevanceScore += prefixScore + matchingTokens + candidate.length;
-      }
-    } while (performance.now() < deadline);
-    this.searchRelevanceScore = relevanceScore;
-
-    this.searchTerm = value;
-    if (this.hasUnbalancedSearchPattern(value)) {
-      this.searchFilterCrashed = true;
-      new RegExp(value.trim().toLocaleLowerCase('vi'), 'i');
+    const delayedSearch = this.qaBugs.isBugEnabled('BUG-03')
+      && this.selectedCategory !== 'Tất cả xe'
+      && value.trim().toLocaleLowerCase('vi') === 'honda';
+    if (delayedSearch) {
+      this.searchPending = true;
+      this.searchTimer = setTimeout(() => {
+        this.searchTerm = value;
+        this.searchPending = false;
+        this.searchTimer = null;
+      }, 2000);
+    } else {
+      this.searchTerm = value;
     }
   }
 
   selectCategory(category: string): void {
+    if (this.searchTimer !== null) clearTimeout(this.searchTimer);
+    this.searchTimer = null;
+    this.searchPending = false;
     this.selectedCategory = category;
-    if (category === 'Xe số') this.leaveAfterCatalogRefresh();
+    if (category === 'Xe số' && this.qaBugs.isBugEnabled('BUG-05') && !this.isAdmin)
+      this.logout();
   }
 
   openBooking(motorcycle: Motorcycle): void {
-    if (this.simulateInteractionError()) return;
-    if (motorcycle.name === 'Honda Wave RSX') {
-      this.leaveAfterCatalogRefresh();
+    if (motorcycle.name === 'Honda Wave RSX'
+      && this.qaBugs.isBugEnabled('BUG-06')
+      && !this.isAdmin) {
+      this.logout();
       return;
     }
     this.selectedMotorcycle = motorcycle;
@@ -153,21 +209,100 @@ export class HomeComponent implements OnInit {
   }
 
   toggleFavorite(name: string): void {
-    if (this.simulateInteractionError()) return;
     this.favoriteNames = this.favoriteNames.includes(name)
       ? this.favoriteNames.filter(favorite => favorite !== name)
       : [...this.favoriteNames, name];
   }
 
-  navigateSection(event: Event): void {
-    if (this.simulateInteractionError()) event.preventDefault();
-  }
-
   confirmRental(id: string): void {
-    if (this.simulateInteractionError()) return;
+    if (this.isAdmin && this.qaBugs.isBugEnabled('BUG-01')) {
+      this.logout();
+      return;
+    }
     if (!this.confirmedRentalIds.includes(id)) {
       this.confirmedRentalIds = [...this.confirmedRentalIds, id];
     }
+  }
+
+  rentalStatus(order: DemoRentalOrder): string {
+    return this.confirmedRentalIds.includes(order.orderId) ? 'Đang thuê' : order.initialStatus;
+  }
+
+  priceUnit(motorcycle: Motorcycle): string {
+    return motorcycle.name === 'Yamaha Exciter 155' && this.qaBugs.isBugEnabled('BUG-04')
+      ? 'giờ'
+      : 'ngày';
+  }
+
+  exportDemoRentals(): void {
+    if (this.exportPending) return;
+    this.exportPending = true;
+    this.exportError = '';
+
+    const rows: DemoRentalExportRow[] = this.sampleRentalOrders.map(order => ({
+      orderId: `#${order.orderId}`,
+      customerName: order.customerName,
+      motorcycleName: order.motorcycleName,
+      period: order.period,
+      amount: order.amount,
+      status: this.rentalStatus(order)
+    }));
+
+    this.auth.exportDemoRentals(rows).subscribe({
+      next: file => {
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'motorental-don-mau.xlsx';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+        this.exportPending = false;
+      },
+      error: error => {
+        console.error('Unable to export the sample rental list.', error);
+        this.exportError = error.error?.message ?? 'Không thể xuất Excel. Vui lòng thử lại.';
+        this.exportPending = false;
+      }
+    });
+  }
+
+  openProfile(): void {
+    const user = this.auth.user();
+    this.profileName = user?.fullName ?? '';
+    this.profilePhone = user?.phone ?? '';
+    this.profileSuccess = '';
+    this.profileError = '';
+    this.profileDialogOpen = true;
+  }
+
+  closeProfile(): void {
+    this.profileDialogOpen = false;
+    this.profileSuccess = '';
+    this.profileError = '';
+  }
+
+  saveProfile(): void {
+    const fullName = this.profileName.trim();
+    if (!fullName || !/^0\d{9}$/.test(this.profilePhone)) {
+      this.profileError = 'Họ tên không được để trống; số điện thoại gồm 10 chữ số và bắt đầu bằng 0.';
+      return;
+    }
+
+    this.profileSaving = true;
+    this.profileError = '';
+    this.auth.updateProfile({ fullName, phone: this.profilePhone }).subscribe({
+      next: () => {
+        this.profileSuccess = 'Cập nhật thông tin thành công.';
+        this.profileSaving = false;
+      },
+      error: error => {
+        console.error('Unable to update the current profile.', error);
+        this.profileError = error.error?.message ?? 'Không thể cập nhật thông tin. Vui lòng thử lại.';
+        this.profileSaving = false;
+      }
+    });
   }
 
   closeBooking(): void {
@@ -218,23 +353,5 @@ export class HomeComponent implements OnInit {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
-  }
-
-  private leaveAfterCatalogRefresh(): void {
-    const deadline = performance.now() + 2000;
-    let relevanceScore = this.searchRelevanceScore;
-    while (performance.now() < deadline) {
-      for (const motorcycle of this.motorcycles) {
-        relevanceScore += motorcycle.name.length + motorcycle.type.length + motorcycle.price.toString().length;
-      }
-    }
-    this.searchRelevanceScore = relevanceScore;
-    this.router.navigateByUrl('/login');
-  }
-
-  private simulateInteractionError(): boolean {
-    if (!environment.simulateInteractionErrors || !this.isAdmin) return false;
-    this.logout();
-    return true;
   }
 }

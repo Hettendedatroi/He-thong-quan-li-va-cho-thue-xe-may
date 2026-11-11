@@ -7,6 +7,15 @@ import { environment } from '../../environments/environment';
 export interface User { id: number; fullName: string; email: string; phone: string; role: string; }
 interface AuthResult { token: string; user: User; }
 
+export interface DemoRentalExportRow {
+  orderId: string;
+  customerName: string;
+  motorcycleName: string;
+  period: string;
+  amount: string;
+  status: string;
+}
+
 const API = `${environment.apiUrl}/auth`;
 
 function isUser(value: unknown): value is User {
@@ -47,12 +56,24 @@ export class AuthService {
     return this.http.post<AuthResult>(`${API}/login`, body).pipe(tap(r => this.save(r)));
   }
   me() { return this.http.get<User>(`${API}/me`); }
+  refreshUser(user: User) { this.saveUser(user); }
+  updateProfile(body: { fullName: string; phone: string }) {
+    return this.http.put<User>(`${API}/me`, body).pipe(tap(user => this.saveUser(user)));
+  }
+  exportDemoRentals(rows: DemoRentalExportRow[]) {
+    return this.http.post(`${environment.apiUrl}/admin/demo-rentals/export`, { rows }, { responseType: 'blob' });
+  }
   logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); this.user.set(null); }
 
   private save(r: AuthResult) {
     localStorage.setItem('token', r.token);
     localStorage.setItem('user', JSON.stringify(r.user));
     this.user.set(r.user);
+  }
+
+  private saveUser(user: User) {
+    localStorage.setItem('user', JSON.stringify(user));
+    this.user.set(user);
   }
 }
 

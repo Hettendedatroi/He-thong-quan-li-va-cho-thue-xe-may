@@ -1,4 +1,4 @@
 export const environment = {
-  simulateInteractionErrors: true,
+  qaBugSeedLookup: true,
   apiUrl: '/api'
 };

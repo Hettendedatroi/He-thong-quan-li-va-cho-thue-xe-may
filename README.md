@@ -66,9 +66,12 @@ Mở `http://localhost:4200`. Proxy dev chuyển `/api` tới backend local tạ
 | POST | `/api/auth/register` | Tạo tài khoản Customer |
 | POST | `/api/auth/login` | Đăng nhập và nhận JWT |
 | GET | `/api/auth/me` | Thông tin tài khoản hiện tại (cần JWT) |
+| PUT | `/api/auth/me` | Cập nhật họ tên và số điện thoại của chính người dùng (cần JWT) |
 | GET | `/api/admin/ping` | Endpoint kiểm tra quyền Admin |
+| POST | `/api/admin/demo-rentals/export` | Xuất các đơn mẫu đang hiển thị thành `.xlsx` (chỉ Admin; không lưu dữ liệu) |
+| GET | `/api/qa/bug-seeds` | Danh sách mã BUG đang bật (chỉ có trong Development/QA và cần JWT) |
 
-## Phạm vi demo và các điểm cần kiểm thử
+## Normal Mode và dữ liệu mẫu
 
 Trang tổng quan hiện dùng danh sách xe, giá, ảnh, lượt đánh giá, số liệu báo cáo và đơn thuê mẫu; các mục này không được lấy từ backend.
 
@@ -77,7 +80,57 @@ Trang tổng quan hiện dùng danh sách xe, giá, ảnh, lượt đánh giá, 
 - Nút yêu thích chỉ thay đổi trạng thái tạm thời trong phiên; tải lại trang sẽ mất.
 - Khách hàng bấm “Đơn thuê” không tới được danh sách đơn; mục này chỉ xuất hiện trong giao diện Admin. Liên kết “Báo cáo” của Admin cũng chưa có khu vực đích.
 - Biểu tượng thông báo và phím tắt `⌘ K` đang chỉ mang tính trang trí, chưa mở thông báo hoặc đưa con trỏ tới ô tìm kiếm.
-- Chức năng quản lý đội xe và đơn thuê chưa có luồng nghiệp vụ đầy đủ; yêu thích không được lưu sau khi tải lại trang.
-- Dữ liệu trang Admin là dữ liệu minh họa, không phản ánh giao dịch thật.
+- Dashboard, danh sách xe và đơn thuê đều là dữ liệu minh họa, không phản ánh giao dịch thật. Xác nhận đơn chỉ thay đổi trạng thái trong phiên trình duyệt.
+- Xuất Excel chỉ xuất các đơn mẫu đang hiển thị, có chú thích “Dữ liệu minh họa, không phải giao dịch thật”; file được tạo trong bộ nhớ và không lưu ở backend.
+- Hồ sơ Customer lưu họ tên và số điện thoại trong SQLite. Vai trò, email và mật khẩu không được cập nhật qua chức năng này.
 
-Đây là các giới hạn/chức năng chưa hoàn thiện của bản demo, không nên xem số liệu hoặc trạng thái đặt xe là dữ liệu nghiệp vụ thật.
+Normal Mode là chế độ mặc định. Tất cả seed BUG đều tắt nếu không cấu hình `QA_BUG_SEEDING_ENABLED=true` và danh sách `QA_BUG_IDS`.
+
+## QA Bug Seed Mode
+
+Chỉ dùng tài khoản, dữ liệu giả và cơ sở dữ liệu QA riêng. Backend từ chối khởi động nếu bật QA seeding ngoài môi trường `Development` hoặc `QA`; khi có bất kỳ BUG nào được bật, phải chỉ rõ `QA_DATABASE_PATH`. Backend cũng từ chối nếu đường dẫn này trùng cơ sở dữ liệu bình thường. Không bật QA seeding trên dịch vụ Production hoặc trên dữ liệu người dùng thật. BUG-07 đến BUG-10 chỉ chạy trên loopback (không chấp nhận biến `PORT`/binding công khai); BUG-10 chỉ trả chuỗi `QA_ONLY_DUMMY_HASH`, không bao giờ trả password hash thật.
+
+Tạo secret local một lần (nếu chưa có) và chạy backend trong một cửa sổ PowerShell:
+
+```powershell
+Set-Location .\backend
+dotnet user-secrets init
+dotnet user-secrets set "Jwt:Key" "<secret-ngẫu-nhiên-tối-thiểu-32-bytes>"
+dotnet user-secrets set "Admin:Password" "<mật-khẩu-admin-qa>"
+
+$env:ASPNETCORE_ENVIRONMENT = "QA"
+$env:QA_BUG_SEEDING_ENABLED = "true"
+$env:QA_BUG_IDS = "BUG-01"
+$env:QA_DATABASE_PATH = ".\motorental-qa.db"
+dotnet run
+```
+
+Trong cửa sổ PowerShell khác, chạy frontend ở chế độ Development để nó đọc danh sách BUG từ API QA:
+
+```powershell
+Set-Location .\moto-rental-web
+npm ci
+npm start
+```
+
+Mở `http://localhost:4200`. Mỗi lần chỉ bật một mã BUG để kết quả không phụ thuộc các kịch bản khác. Thay giá trị `QA_BUG_IDS` bằng một mã bất kỳ trong bảng dưới đây rồi khởi động lại backend; danh sách được phân tích nghiêm ngặt và mã không hợp lệ sẽ làm backend báo lỗi cấu hình.
+
+| Mã | Mô phỏng QA |
+|---|---|
+| BUG-01 | Xác nhận đơn mẫu làm Admin đăng xuất |
+| BUG-02 | Lệch nhẹ thanh tìm kiếm trên bố cục desktop |
+| BUG-03 | Trễ bất đồng bộ 2 giây khi đã lọc nhóm và tìm từ khóa `honda`; không chặn luồng giao diện |
+| BUG-04 | Yamaha Exciter 155 hiển thị đơn vị `đ/giờ` |
+| BUG-05 | Customer chọn nhóm Xe số bị đăng xuất |
+| BUG-06 | Customer chọn thuê Honda Wave RSX bị đăng xuất |
+| BUG-07 | Chấp nhận email khác kiểu chữ và lưu nguyên kiểu chữ trong cơ sở dữ liệu QA |
+| BUG-08 | Chỉ trong cơ sở dữ liệu QA, payload đăng ký có `role: "Admin"` tạo tài khoản Admin |
+| BUG-09 | Hai thông báo đăng nhập sai khác nhau giữa email không tồn tại và mật khẩu sai |
+| BUG-10 | API hồ sơ thêm trường hash giả `QA_ONLY_DUMMY_HASH` |
+| BUG-11 | Chọn giá thấp đến cao nhưng danh sách hiển thị cao đến thấp |
+| BUG-12 | File Excel bỏ bản ghi cuối cùng trong danh sách đơn mẫu |
+| BUG-13 | API/UI báo cập nhật hồ sơ thành công nhưng không lưu vào SQLite |
+
+BUG-07 đến BUG-10 yêu cầu `QA_DATABASE_PATH` riêng. Có thể dùng tên file khác nhau cho từng lượt kiểm thử để mỗi lượt dùng dữ liệu sạch; ứng dụng không tự xóa hoặc sửa cơ sở dữ liệu hiện có. Để tắt chế độ, dừng backend QA và chạy lại trong cửa sổ mới với `QA_BUG_SEEDING_ENABLED=false` (hoặc bỏ các biến QA). Bản build Production của Angular không gọi API lấy cấu hình BUG.
+
+API và trang home hiện dùng Minimal API/EF Core trực tiếp theo cấu trúc dự án; bảng SQLite không đổi nên không cần migration. Không có thư viện Excel mới: backend tạo gói `.xlsx` OpenXML bằng các API có sẵn của .NET.
