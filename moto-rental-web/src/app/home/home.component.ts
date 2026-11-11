@@ -194,7 +194,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.applySearchCriteria();
         this.searchPending = false;
         this.searchTimer = null;
-      }, 2000);
+      }, 7000);
     } else {
       this.applySearchCriteria();
     }

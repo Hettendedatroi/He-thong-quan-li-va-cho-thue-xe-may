@@ -79,7 +79,7 @@ describe('HomeComponent', () => {
       .toEqual([150000, 180000, 250000, 350000]);
   });
 
-  it('shows loading and delays combined demo search and filter results for 2 seconds', fakeAsync(() => {
+  it('shows loading and delays combined demo search and filter results for 7 seconds', fakeAsync(() => {
     enabledBugIds.add('BUG-03');
     authMock.isDemoAccount.set(true);
     component.onSearchChange('Honda');
@@ -96,7 +96,7 @@ describe('HomeComponent', () => {
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual([
       'Honda Vision', 'Honda Wave RSX'
     ]);
-    tick(1999);
+    tick(6999);
     expect(component.searchPending).toBeTrue();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.motorcycle-grid').getAttribute('aria-busy')).toBe('true');
@@ -122,7 +122,7 @@ describe('HomeComponent', () => {
     component.selectCategory('Xe số');
     expect(component.searchPending).toBeFalse();
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
-    tick(2000);
+    tick(7000);
     expect(component.searchPending).toBeFalse();
   }));
 
@@ -139,7 +139,7 @@ describe('HomeComponent', () => {
 
     component.selectCategory('Xe tay ga');
     expect(component.searchPending).toBeTrue();
-    tick(1999);
+    tick(6999);
     expect(component.searchPending).toBeTrue();
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
 
@@ -155,7 +155,7 @@ describe('HomeComponent', () => {
     component.onSearchChange('Yamaha');
     expect(component.searchPending).toBeTrue();
 
-    tick(2000);
+    tick(7000);
     expect(component.searchPending).toBeFalse();
     expect(component.filteredMotorcycles).toEqual([]);
     fixture.detectChanges();
@@ -177,7 +177,7 @@ describe('HomeComponent', () => {
     component.onSearchChange('Honda Wave RSX');
     expect(component.searchPending).toBeFalse();
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
-    tick(2000);
+    tick(7000);
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
   }));
 
