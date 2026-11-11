@@ -79,8 +79,9 @@ describe('HomeComponent', () => {
       .toEqual([150000, 180000, 250000, 350000]);
   });
 
-  it('shows loading and delays combined QA search and filter results for 2 seconds', fakeAsync(() => {
+  it('shows loading and delays combined demo search and filter results for 2 seconds', fakeAsync(() => {
     enabledBugIds.add('BUG-03');
+    authMock.isDemoAccount.set(true);
     component.onSearchChange('Honda');
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual([
       'Honda Vision', 'Honda Wave RSX'
@@ -107,8 +108,9 @@ describe('HomeComponent', () => {
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
   }));
 
-  it('does not delay a standalone QA search or category selection', fakeAsync(() => {
+  it('does not delay a standalone demo search or category selection', fakeAsync(() => {
     enabledBugIds.add('BUG-03');
+    authMock.isDemoAccount.set(true);
 
     component.onSearchChange('Honda');
     expect(component.searchPending).toBeFalse();
@@ -126,6 +128,7 @@ describe('HomeComponent', () => {
 
   it('cancels stale combined searches and applies only the latest criteria', fakeAsync(() => {
     enabledBugIds.add('BUG-03');
+    authMock.isDemoAccount.set(true);
     component.selectCategory('Xe số');
     component.onSearchChange('Honda');
     tick(1000);
@@ -147,6 +150,7 @@ describe('HomeComponent', () => {
 
   it('shows the empty state after a delayed search with no matching vehicles', fakeAsync(() => {
     enabledBugIds.add('BUG-03');
+    authMock.isDemoAccount.set(true);
     component.selectCategory('Xe số');
     component.onSearchChange('Yamaha');
     expect(component.searchPending).toBeTrue();
@@ -158,14 +162,19 @@ describe('HomeComponent', () => {
     expect(fixture.nativeElement.querySelector('.empty-state')).not.toBeNull();
   }));
 
-  it('applies combined search immediately when BUG-03 is disabled', fakeAsync(() => {
+  it('does not delay a non-demo account even if BUG-03 is enabled', fakeAsync(() => {
     enabledBugIds.add('BUG-03');
     component.selectCategory('Xe số');
     component.onSearchChange('Honda');
+    expect(component.searchPending).toBeFalse();
+    expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
+
+    authMock.isDemoAccount.set(true);
+    component.onSearchChange('Honda Wave');
     expect(component.searchPending).toBeTrue();
 
     enabledBugIds.delete('BUG-03');
-    component.onSearchChange('Honda Wave');
+    component.onSearchChange('Honda Wave RSX');
     expect(component.searchPending).toBeFalse();
     expect(component.filteredMotorcycles.map(motorcycle => motorcycle.name)).toEqual(['Honda Wave RSX']);
     tick(2000);

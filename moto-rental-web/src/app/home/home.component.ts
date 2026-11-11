@@ -185,6 +185,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.searchPending = false;
 
     const delayedSearch = this.qaBugs.isBugEnabled('BUG-03')
+      && this.auth.isDemoAccount()
       && this.selectedCategory !== 'Tất cả xe'
       && this.searchTerm.trim().length > 0;
     if (delayedSearch) {

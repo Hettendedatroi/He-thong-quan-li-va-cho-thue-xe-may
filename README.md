@@ -32,7 +32,7 @@ Workflow `.github/workflows/deploy-frontend.yml` tự build và deploy khi có t
 
 Frontend production gọi API ở `https://he-thong-quan-li-va-cho-thue-xe-may.onrender.com/api`. Nếu URL service Render của bạn khác, cập nhật `apiUrl` trong `moto-rental-web/src/environments/environment.ts`.
 
-Bản frontend Production bật BUG-03 cho mọi người dùng: tìm kiếm có từ khóa kết hợp bộ lọc loại xe sẽ chờ khoảng 2 giây và hiển thị trạng thái đang tìm. BUG-05, BUG-06 và BUG-11 chỉ bật cho tài khoản demo mà backend xác thực qua `isDemoAccount`; không cần bật QA mode trên Render. BUG-05/06 chỉ đăng xuất Customer demo khi chọn Xe số/mở Honda Wave RSX; BUG-11 đảo kết quả khi chọn giá thấp đến cao. Admin và Customer khác vẫn được giữ phiên và sắp xếp chính xác. Không gửi cờ bật BUG từ frontend lên backend. Tắt/thay đổi danh sách trong `productionBugIds` hoặc `productionDemoBugIds` tại `moto-rental-web/src/environments/environment.ts`.
+Bản frontend Production chỉ bật BUG-03, BUG-05, BUG-06 và BUG-11 cho tài khoản demo mà backend xác thực qua `isDemoAccount`; không cần bật QA mode trên Render. BUG-03 trì hoãn tìm kiếm kết hợp khoảng 2 giây; BUG-05/06 đăng xuất Customer demo khi chọn Xe số/mở Honda Wave RSX; BUG-11 đảo kết quả khi chọn giá thấp đến cao. Admin và Customer khác không bị áp dụng các lỗi này; tìm kiếm kết hợp và sắp xếp hoạt động bình thường. Không gửi cờ bật BUG từ frontend lên backend. Tắt/thay đổi danh sách trong `productionBugIds` hoặc `productionDemoBugIds` tại `moto-rental-web/src/environments/environment.ts`.
 
 ## Chạy local
 
