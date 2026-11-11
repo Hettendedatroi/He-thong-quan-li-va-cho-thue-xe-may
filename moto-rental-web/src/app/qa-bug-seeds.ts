@@ -9,7 +9,7 @@ interface QaBugSeedResponse {
 @Injectable({ providedIn: 'root' })
 export class QaBugSeedService {
   private readonly http = inject(HttpClient);
-  private readonly enabledBugIds = signal<ReadonlySet<string>>(new Set());
+  private readonly enabledBugIds = signal<ReadonlySet<string>>(new Set(environment.productionBugIds));
 
   load(): void {
     if (!environment.qaBugSeedLookup) return;

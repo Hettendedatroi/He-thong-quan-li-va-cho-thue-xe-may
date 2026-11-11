@@ -32,6 +32,8 @@ Workflow `.github/workflows/deploy-frontend.yml` tự build và deploy khi có t
 
 Frontend production gọi API ở `https://he-thong-quan-li-va-cho-thue-xe-may.onrender.com/api`. Nếu URL service Render của bạn khác, cập nhật `apiUrl` trong `moto-rental-web/src/environments/environment.ts`.
 
+Bản frontend Production hiện bật riêng BUG-03: tìm kiếm có từ khóa kết hợp bộ lọc loại xe sẽ chờ khoảng 2 giây và hiển thị trạng thái đang tìm. Cấu hình này áp dụng cho người dùng GitHub Pages, không yêu cầu bật QA mode trên Render, không gọi endpoint lấy seed QA và không bật các BUG khác. Muốn thay đổi, cập nhật `productionBugIds` trong `moto-rental-web/src/environments/environment.ts`.
+
 ## Chạy local
 
 Yêu cầu: .NET 8 SDK, Node.js 20 trở lên và npm.
@@ -84,7 +86,7 @@ Trang tổng quan hiện dùng danh sách xe, giá, ảnh, lượt đánh giá, 
 - Xuất Excel chỉ xuất các đơn mẫu đang hiển thị, có chú thích “Dữ liệu minh họa, không phải giao dịch thật”; file được tạo trong bộ nhớ và không lưu ở backend.
 - Hồ sơ Customer lưu họ tên và số điện thoại trong SQLite. Vai trò, email và mật khẩu không được cập nhật qua chức năng này.
 
-Normal Mode là chế độ mặc định. Tất cả seed BUG đều tắt nếu không cấu hình `QA_BUG_SEEDING_ENABLED=true` và danh sách `QA_BUG_IDS`.
+Normal Mode là chế độ mặc định khi chạy local và backend. Frontend Production hiện bật riêng BUG-03 theo cấu hình tĩnh; các seed còn lại vẫn tắt. Backend chỉ bật QA seeds khi cấu hình `QA_BUG_SEEDING_ENABLED=true` cùng danh sách `QA_BUG_IDS`.
 
 ## QA Bug Seed Mode
 
@@ -131,6 +133,6 @@ Mở `http://localhost:4200`. Mỗi lần chỉ bật một mã BUG để kết 
 | BUG-12 | File Excel bỏ bản ghi cuối cùng trong danh sách đơn mẫu |
 | BUG-13 | API/UI báo cập nhật hồ sơ thành công nhưng không lưu vào SQLite |
 
-BUG-07 đến BUG-10 yêu cầu `QA_DATABASE_PATH` riêng. Có thể dùng tên file khác nhau cho từng lượt kiểm thử để mỗi lượt dùng dữ liệu sạch; ứng dụng không tự xóa hoặc sửa cơ sở dữ liệu hiện có. Để tắt chế độ, dừng backend QA và chạy lại trong cửa sổ mới với `QA_BUG_SEEDING_ENABLED=false` (hoặc bỏ các biến QA). Bản build Production của Angular không gọi API lấy cấu hình BUG.
+BUG-07 đến BUG-10 yêu cầu `QA_DATABASE_PATH` riêng. Có thể dùng tên file khác nhau cho từng lượt kiểm thử để mỗi lượt dùng dữ liệu sạch; ứng dụng không tự xóa hoặc sửa cơ sở dữ liệu hiện có. Để tắt chế độ, dừng backend QA và chạy lại trong cửa sổ mới với `QA_BUG_SEEDING_ENABLED=false` (hoặc bỏ các biến QA). Bản build Production của Angular không gọi API lấy cấu hình BUG; chỉ BUG-03 được bật từ cấu hình frontend tĩnh.
 
 API và trang home hiện dùng Minimal API/EF Core trực tiếp theo cấu trúc dự án; bảng SQLite không đổi nên không cần migration. Không có thư viện Excel mới: backend tạo gói `.xlsx` OpenXML bằng các API có sẵn của .NET.
